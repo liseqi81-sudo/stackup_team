@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.mapper.JobSeekerMapper">
+
+    <select id="selectAll" resultType="com.edu.springboot.jdbc.JobSeekerDTO">
+    SELECT 
+        s.SEEK_ID AS seekId,
+        s.USER_ID AS userId,
+        u.USER_NAME AS userName, 
+        s.SEEK_TITLE AS seekTitle,
+        s.SEEK_CATEGORY AS seekCategory,
+        s.SKILLS,
+        s.CONTENTS,
+        TO_CHAR(s.CREATE_DATE, 'YYYY-MM-DD') AS createDate,
+        s.SEEK_URL AS seekUrl
+    FROM JOB_SEEKER s
+    JOIN USER_ACCOUNT u ON s.USER_ID = u.USER_ID
+    <where>
+        <if test="keyword != null and keyword != ''">
+            AND (s.SEEK_TITLE LIKE '%' || #{keyword} || '%' 
+                 OR s.CONTENTS LIKE '%' || #{keyword} || '%'
+                 OR s.SKILLS LIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="category != null and category != '' and category != 'ALL'">
+            AND s.SEEK_CATEGORY = #{category}
+        </if>
+    </where>
+    ORDER BY s.CREATE_DATE DESC
+</select>
+    
+    <select id="countList" resultType="int">
+        SELECT COUNT(*)
+        FROM JOB_SEEKER
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (SEEK_TITLE LIKE '%' || #{keyword} || '%' 
+                     OR CONTENTS LIKE '%' || #{keyword} || '%'
+                     OR SKILLS LIKE '%' || #{keyword} || '%')
+            </if>
+            <if test="category != null and category != '' and category != 'ALL'">
+                AND SEEK_CATEGORY = #{category}
+            </if>
+        </where>
+    </select>
+
+   <select id="selectOne" parameterType="int" resultType="com.edu.springboot.jdbc.JobSeekerDTO">
+    SELECT 
+        s.SEEK_ID AS seekId,
+        s.USER_ID AS userId,
+        u.USER_NAME AS userName,
+        s.SEEK_TITLE AS seekTitle,
+        s.SEEK_CATEGORY AS seekCategory,
+        s.SKILLS,
+        s.CONTENTS,
+        TO_CHAR(s.CREATE_DATE, 'YYYY-MM-DD') AS createDate,
+        s.SEEK_URL AS seekUrl
+    FROM JOB_SEEKER s
+    JOIN USER_ACCOUNT u ON s.USER_ID = u.USER_ID
+    WHERE s.SEEK_ID = #{seekId}
+</select>
+
+<insert id="insert" parameterType="com.edu.springboot.jdbc.JobSeekerDTO">
+    INSERT INTO JOB_SEEKER (
+        SEEK_ID, 
+        USER_ID, 
+        SEEK_TITLE, 
+        SEEK_CATEGORY, 
+        SKILLS, 
+        CONTENTS, 
+        SEEK_URL, 
+        CREATE_DATE
+    ) VALUES (
+        seq_job_seeker.NEXTVAL, 
+        #{userId}, 
+        #{seekTitle}, 
+        #{seekCategory}, 
+        #{skills, jdbcType=VARCHAR}, 
+        #{contents, jdbcType=VARCHAR}, 
+        #{seekUrl, jdbcType=VARCHAR}, 
+        SYSDATE
+    )
+    </insert>
+
+    <update id="update" parameterType="com.edu.springboot.jdbc.JobSeekerDTO">
+        UPDATE JOB_SEEKER 
+        SET 
+            SEEK_TITLE = #{seekTitle},
+            SEEK_CATEGORY = #{seekCategory},
+            SKILLS = #{skills, jdbcType=VARCHAR},
+            CONTENTS = #{contents, jdbcType=VARCHAR},
+            SEEK_URL = #{seekUrl, jdbcType=VARCHAR}
+        WHERE SEEK_ID = #{seekId} AND USER_ID = #{userId}
+    </update>
+
+    <delete id="delete" parameterType="int">
+        DELETE FROM JOB_SEEKER WHERE SEEK_ID = #{seekId}
+    </delete>
+	<insert id="insertContact" parameterType="com.edu.springboot.jdbc.JobSeekerContactDTO">
+	    INSERT INTO JOB_SEEKER_CONTACT (
+	        CONTACT_ID,
+	        SEEK_ID,
+	        USER_ID,
+	        SENDER_ID,
+	        CONTACT_CONTENT,
+	        COMPANY_INFO,
+	        JOB_INFO,
+	        CARD_IMG,
+	        REMARK,
+	        CREATE_DATE
+	    ) VALUES (
+	        SEQ_JOB_CONTACT.NEXTVAL,
+	        #{seekId},
+	        #{userId, jdbcType=VARCHAR},
+	        #{senderId, jdbcType=VARCHAR},
+	        #{contactContent, jdbcType=CLOB},
+	        #{companyInfo, jdbcType=VARCHAR},
+	        #{jobInfo, jdbcType=VARCHAR},
+	        #{cardImg, jdbcType=VARCHAR},
+	        #{remark, jdbcType=VARCHAR},
+	        SYSDATE
+	    )
+	</insert>
+	
+	<select id="getReceivedContacts" parameterType="string"
+	        resultType="com.edu.springboot.jdbc.JobContactDTO">
+	    SELECT
+	        CONTACT_ID      AS contactId,
+	        USER_ID         AS receiverId,
+	        SEEK_ID         AS seekId,
+	        SENDER_ID       AS senderId,
+	        NULL            AS contactTitle,
+	        CONTACT_CONTENT AS contactContent,
+	        COMPANY_INFO    AS companyInfo,
+	        JOB_INFO        AS jobInfo,
+	        NULL            AS fileOrgName,
+	        NULL            AS fileSavedName,
+	        CARD_IMG        AS filePath,
+	        CASE WHEN READ_DATE IS NULL THEN 'N' ELSE 'Y' END AS readYn,
+	        CREATE_DATE     AS createdAt,
+	        READ_DATE       AS readAt
+	    FROM JOB_SEEKER_CONTACT
+	    WHERE USER_ID = #{userId}
+	    ORDER BY CONTACT_ID DESC
+	</select>
+
+	<select id="getUnreadContactCount" parameterType="string" resultType="int">
+	    SELECT COUNT(*)
+	    FROM JOB_SEEKER_CONTACT
+	    WHERE USER_ID = #{userId}
+	      AND READ_DATE IS NULL
+	</select>
+
+    <select id="getContactDetail"
+            parameterType="int"
+            resultType="com.edu.springboot.jdbc.JobSeekerContactDTO">
+        SELECT
+            CONTACT_ID      AS contactId,
+            SEEK_ID         AS seekId,
+            USER_ID         AS userId,
+            SENDER_ID       AS senderId,
+            CONTACT_TITLE   AS contactTitle,
+            CONTACT_CONTENT AS contactContent,
+            COMPANY_INFO    AS companyInfo,
+            JOB_INFO        AS jobInfo,
+            CARD_IMG        AS cardImg,
+            READ_YN         AS readYn,
+            CREATE_DATE     AS createDate,
+            READ_DATE       AS readDate
+        FROM JOB_SEEKER_CONTACT
+        WHERE CONTACT_ID = #{contactId}
+    </select>
+
+    <update id="updateReadYn" parameterType="int">
+        UPDATE JOB_SEEKER_CONTACT
+        SET READ_YN = 'Y',
+            READ_DATE = SYSDATE
+        WHERE CONTACT_ID = #{contactId}
+          AND READ_YN = 'N'
+    </update>
+    
+    <select id="getReceivedContactDetail" parameterType="int"
+	        resultType="com.edu.springboot.jdbc.JobSeekerContactDTO">
+	    SELECT
+	        CONTACT_ID      AS contactId,
+	        SEEK_ID         AS seekId,
+	        USER_ID         AS userId,
+	        SENDER_ID       AS senderId,
+	        CONTACT_CONTENT AS contactContent,
+	        COMPANY_INFO    AS companyInfo,
+	        JOB_INFO        AS jobInfo,
+	        CARD_IMG        AS cardImg,
+	        REMARK          AS remark,
+	        CREATE_DATE     AS createDate,
+	        READ_DATE       AS readDate
+	    FROM JOB_SEEKER_CONTACT
+	    WHERE CONTACT_ID = #{contactId}
+	</select>
+	
+	
+	<update id="updateReadDate" parameterType="int">
+	    UPDATE JOB_SEEKER_CONTACT
+	    SET READ_DATE = SYSDATE
+	    WHERE CONTACT_ID = #{contactId}
+	      AND READ_DATE IS NULL
+	</update>
+</mapper>

@@ -1,0 +1,96 @@
+@charset "UTF-8";
+
+:root {
+    --bs-primary: #81c408;   /* 템플릿 메인 초록색 */
+    --bs-secondary: #ffb524; /* 메인 노란색 */
+}
+
+body {
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* 퍼진 화면을 잡아주는 컨테이너 */
+.login-container {
+    width: 100%;
+    max-width: 450px;
+    padding: 40px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 0 45px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.login-container h2 {
+    color: var(--bs-primary);
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+/* 입력창 스타일 */
+.login-container input[type="text"],
+.login-container input[type="password"] {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+    transition: 0.3s;
+}
+
+.login-container input:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.2rem rgba(129, 196, 8, 0.25);
+}
+
+/* 로그인 버튼 (초록색) */
+.login-container input[type="submit"] {
+    background-color: var(--bs-primary);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.5s;
+    margin-top: 10px;
+}
+
+.login-container input[type="submit"]:hover {
+    background-color: #6da307;
+}
+
+/* 하단 링크 */
+.login-options {
+    margin-top: 20px;
+    font-size: 0.9em;
+}
+.login-options a {
+    color: #666;
+    text-decoration: none;
+}
+.login-options a:hover {
+    color: var(--bs-primary);
+}
+
+/* 소셜 로그인 버튼 */
+.social-login {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+.social-login button {
+    width: 100%;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}

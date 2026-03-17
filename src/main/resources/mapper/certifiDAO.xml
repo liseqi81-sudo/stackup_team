@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.ICertifiService">
+
+
+  <select id="certifiList" resultType="com.edu.springboot.jdbc.CertifiDTO">
+  SELECT 
+      c.*, 
+      CASE WHEN s.TARGET_ID IS NOT NULL THEN 'Y' ELSE 'N' END as is_fav,
+      -- u.TARGET_ID가 존재하면 'Y', 아니면 'N'
+      CASE WHEN u.TARGET_ID IS NOT NULL THEN 'Y' ELSE 'N' END as is_ing,
+      
+      MIN(CASE WHEN e.EXAM_TYPE = '필기' THEN e.REG_END_DATE END) AS deadline_written,
+      TRUNC(MIN(CASE WHEN e.EXAM_TYPE = '필기' THEN e.REG_END_DATE END)) - TRUNC(SYSDATE) AS d_day_written,
+      
+      MIN(CASE WHEN e.EXAM_TYPE LIKE '실기%' THEN e.REG_END_DATE END) AS deadline_practical,
+      TRUNC(MIN(CASE WHEN e.EXAM_TYPE LIKE '실기%' THEN e.REG_END_DATE END)) - TRUNC(SYSDATE) AS d_day_practical
+      
+  FROM CERTIFICATION c
+  LEFT OUTER JOIN SAVED_ITEM s 
+      ON c.CERTI_ID = s.TARGET_ID 
+      AND s.USER_ID = #{param1} 
+      AND s.TARGET_TYPE = 'CERTI'
+  -- [핵심 수정 부분] 조인 조건에 유저 아이디를 정확히 매칭
+  LEFT OUTER JOIN USER_ING u
+      ON c.CERTI_ID = u.TARGET_ID
+      AND u.USER_ID = #{param1}
+      AND u.TARGET_TYPE = 'CERTI'
+  LEFT JOIN EXAM_SCHEDULE e
+    ON c.CERTI_NAME = e.CERT_ID
+    AND e.REG_END_DATE >= TRUNC(SYSDATE)
+  GROUP BY c.CERTI_ID, c.CERTI_NAME, c.ORGANIZER, c.IS_REGULAR, c.CERTI_TYPE, 
+           c.MAIN_CATEGORY, c.SUB_CATEGORY, c.URL,
+           s.TARGET_ID, u.TARGET_ID  -- 이 u.TARGET_ID가 GROUP BY에 꼭 있어야 함
+  
+  /* 시험 접수 마감일 임박순 정렬 */
+  ORDER BY LEAST(
+      MIN(CASE WHEN e.EXAM_TYPE = '필기' THEN e.REG_END_DATE END),
+      MIN(CASE WHEN e.EXAM_TYPE LIKE '실기%' THEN e.REG_END_DATE END)
+  ) ASC NULLS LAST
+</select>
+
+ 
+
+	<select id="getTypeCounts" resultType="map">
+	   SELECT 
+        CERTI_TYPE as CERTI_TYPE, 
+        COUNT(*) as cnt 
+	    FROM CERTIFICATION 
+	    GROUP BY CERTI_TYPE
+	    ORDER BY CERTI_TYPE ASC
+	</select>
+	
+	<select id="getCategoryList" resultType="map">
+	  SELECT DISTINCT CERTI_TYPE
+	  FROM CERTIFICATION
+	  ORDER BY CERTI_TYPE
+	</select>
+	
+	<insert id="addFavorite">
+    INSERT INTO SAVED_ITEM (SAVED_ID, USER_ID, TARGET_ID, TARGET_TYPE)
+    VALUES (SAVED_ITEM_SEQ.NEXTVAL, #{param1}, #{param2}, #{param3})
+	</insert>
+
+	<delete id="removeFavorite">
+	    DELETE FROM SAVED_ITEM 
+	    WHERE USER_ID = #{param1} AND TARGET_ID = #{param2} AND TARGET_TYPE = #{param3}
+	</delete>
+	
+	<select id="selectTop5PopularCerti"
+        resultType="com.edu.springboot.jdbc.CertifiDTO">
+
+	    <![CDATA[
+	        SELECT
+	            c.certi_id,
+	            c.certi_name,
+	            COUNT(s.saved_id) 
+	        FROM saved_item s
+	        JOIN certification c
+	          ON s.target_id = c.certi_id
+	        WHERE s.target_type = 'CERTI'
+	        GROUP BY c.certi_id, c.certi_name
+	      ORDER BY 
+            CASE 
+                WHEN c.certi_name LIKE '%정보처리기사%' THEN 10000
+                WHEN c.certi_name LIKE '%컴퓨터활용능력%1급%' THEN 9999
+                WHEN c.certi_name LIKE '%컴퓨터활용능력%2급%' THEN 9998
+                WHEN c.certi_name LIKE '%정보보안기사%' THEN 9997
+                WHEN c.certi_name LIKE '%임베디드기능관리사%' THEN 9996
+                ELSE COUNT(s.saved_id) 
+            END DESC
+	        FETCH FIRST 5 ROWS ONLY
+	    ]]>
+	
+	</select>
+	
+	<select id="selectTop5Deadline"
+        resultType="com.edu.springboot.jdbc.CertifiDTO">
+	  <![CDATA[
+	    SELECT *
+	    FROM (
+	      SELECT
+	        c.certi_id   AS certi_id,
+	        c.certi_name AS certi_name,
+	        MIN(e.reg_end_date) AS deadline,
+	        TRUNC(MIN(e.reg_end_date)) - TRUNC(SYSDATE) AS d_day
+	      FROM exam_schedule e
+	      JOIN certification c
+	        ON c.certi_name = e.cert_id   
+	      WHERE e.reg_end_date IS NOT NULL
+	        AND e.reg_end_date >= TRUNC(SYSDATE)
+	      GROUP BY c.certi_id, c.certi_name
+	      ORDER BY MIN(e.reg_end_date) ASC
+	    )
+	    WHERE ROWNUM <= 5
+	  ]]>
+
+	</select>
+	
+	<insert id="addUserIng">
+	  INSERT INTO USER_ING (ING_ID, USER_ID, TARGET_ID, TARGET_TYPE, STATUS)
+	  VALUES (USER_ING_SEQ.NEXTVAL, #{param1}, #{param2}, #{param3}, 0)
+	</insert>
+		
+	<delete id="removeUserIng">
+	  DELETE FROM USER_ING
+	  WHERE USER_ID = #{param1}
+	    AND TARGET_ID = #{param2}
+	    AND TARGET_TYPE = #{param3}
+	</delete>
+	
+	<select id="checkUserIng" resultType="int">
+	  SELECT COUNT(*)
+	  FROM USER_ING
+	  WHERE USER_ID = #{param1}
+	    AND TARGET_ID = #{param2}
+	    AND TARGET_TYPE = #{param3}
+	</select>
+</mapper>

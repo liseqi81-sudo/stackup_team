@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.IQnaService">
+
+    <resultMap id="QnaMap" type="com.edu.springboot.jdbc.QnaDTO">
+        <result column="QNA_IDX" property="qna_idx" />
+        <result column="TITLE" property="title" />
+        <result column="USER_ID" property="user_id" />
+        <result column="USER_NAME" property="user_name" /> <result column="CONTENT" property="content" />
+        <result column="COUNT" property="count" />
+        <result column="QNA_STATUS" property="qna_status" />
+        <result column="CREATED_AT" property="createdat" />
+    </resultMap>
+
+    <select id="getQnaList" resultMap="QnaMap">
+        SELECT q.*, u.USER_NAME 
+        FROM QNA_BOARD q
+        LEFT JOIN USER_ACCOUNT u ON q.USER_ID = u.USER_ID
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                q.${searchField} LIKE '%' || #{searchWord} || '%'
+            </if>
+        </where>
+        ORDER BY q.QNA_IDX DESC
+        OFFSET #{offset} ROWS FETCH NEXT 10 ROWS ONLY
+    </select>
+
+    <select id="getQnaDetail" resultMap="QnaMap">
+    	SELECT q.*, u.USER_NAME 
+    	FROM QNA_BOARD q
+    	LEFT JOIN USER_ACCOUNT u ON UPPER(q.USER_ID) = UPPER(u.USER_ID) WHERE q.QNA_IDX = #{qna_idx}
+	</select>
+
+    <select id="getAllQnaList" resultMap="QnaMap">
+        SELECT q.*, u.USER_NAME 
+        FROM QNA_BOARD q
+        LEFT JOIN USER_ACCOUNT u ON q.USER_ID = u.USER_ID
+        ORDER BY q.QNA_IDX DESC
+    </select>
+
+    <select id="selectQnaCount" resultType="int">
+        SELECT COUNT(*) FROM QNA_BOARD
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                ${searchField} LIKE '%' || #{searchWord} || '%'
+            </if>
+        </where>
+    </select>
+
+    <insert id="qnaWrite" parameterType="com.edu.springboot.jdbc.QnaDTO">
+        INSERT INTO QNA_BOARD (
+            QNA_IDX, TITLE, USER_ID, CONTENT, COUNT, QNA_STATUS, CREATED_AT
+        ) VALUES (
+            QNA_BOARD_SEQ.NEXTVAL, #{title}, #{user_id}, #{content, jdbcType=CLOB}, 0, 'WAITING', SYSDATE
+        )
+    </insert>
+
+    <update id="updateQnaCount">
+        UPDATE QNA_BOARD SET COUNT = COUNT + 1 WHERE QNA_IDX = #{qna_idx}
+    </update>
+
+    <select id="getCommentList" resultType="com.edu.springboot.jdbc.QnaCommentDTO">
+        SELECT c.*, u.USER_NAME 
+        FROM QNA_COMMENT c
+        LEFT JOIN USER_ACCOUNT u ON c.USER_ID = u.USER_ID
+        WHERE c.QNA_IDX = #{qna_idx} 
+        ORDER BY c.COMMENT_IDX ASC
+    </select>
+
+    <insert id="commentWrite" parameterType="com.edu.springboot.jdbc.QnaCommentDTO">
+        INSERT INTO QNA_COMMENT (COMMENT_IDX, QNA_IDX, USER_ID, CONTENT, CREATED_AT)
+        VALUES (QNA_COMMENT_SEQ.NEXTVAL, #{qna_idx}, #{user_id}, #{content}, SYSDATE)
+    </insert>
+
+    <update id="updateQnaStatus">
+        UPDATE QNA_BOARD SET QNA_STATUS = 'COMPLETED' 
+        WHERE QNA_IDX = #{qna_idx}
+    </update>
+    
+    <update id="updateQna" parameterType="com.edu.springboot.jdbc.QnaDTO">
+        UPDATE QNA_BOARD 
+        SET TITLE = #{title}, 
+            CONTENT = #{content, jdbcType=CLOB}
+        WHERE QNA_IDX = #{qna_idx}
+    </update>
+
+    <delete id="deleteQna" parameterType="int">
+        DELETE FROM QNA_BOARD 
+        WHERE QNA_IDX = #{qna_idx}
+    </delete>
+</mapper>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.IBoardService">
+
+    <select id="getAllList" resultType="com.edu.springboot.jdbc.BoardDTO">
+        SELECT 
+            b.IDX, 
+            b.TITLE, 
+            b.USER_ID, 
+            b.CONTENT, 
+            b.BOARD_TYPE, 
+            b.COUNT, 
+            b.REVIEW_STAR AS review_star, 
+            u.USER_NAME AS user_name, 
+            b.CREATED_AT AS createdat 
+        FROM BOARD b
+        LEFT JOIN USER_ACCOUNT u ON b.USER_ID = u.USER_ID
+        WHERE b.BOARD_TYPE = #{board_type}
+        ORDER BY b.IDX DESC
+    </select>
+
+    <select id="getList" resultType="com.edu.springboot.jdbc.BoardDTO">
+        SELECT 
+            b.IDX, b.TITLE, b.USER_ID, b.CONTENT, b.BOARD_TYPE, b.COUNT, 
+            b.REVIEW_STAR AS review_star,
+            u.USER_NAME AS user_name, b.CREATED_AT AS createdat 
+        FROM BOARD b
+        LEFT JOIN USER_ACCOUNT u ON b.USER_ID = u.USER_ID
+        <where>
+            b.BOARD_TYPE = #{board_type}
+            <if test="searchWord != null and searchWord != ''">
+                AND b.${searchField} LIKE '%' || #{searchWord} || '%'
+            </if>
+        </where>
+        ORDER BY b.IDX DESC
+        OFFSET #{offset} ROWS FETCH NEXT 10 ROWS ONLY
+    </select>
+
+    <select id="getTotalCount" resultType="int">
+        SELECT COUNT(*) FROM BOARD
+        <where>
+            board_type = #{board_type}
+            <if test="searchWord != null and searchWord != ''">
+                AND ${searchField} LIKE '%' || #{searchWord} || '%'
+            </if>
+        </where>
+    </select>
+
+    <insert id="write" parameterType="com.edu.springboot.jdbc.BoardDTO">
+       INSERT INTO BOARD (
+            IDX, TITLE, USER_ID, CONTENT, BOARD_TYPE, 
+            REVIEW_STAR, CREATED_AT
+        )
+        VALUES (
+            BOARD_SEQ.NEXTVAL, #{title}, #{user_id, jdbcType=VARCHAR}, 
+            #{content}, #{board_type}, #{review_star}, SYSDATE
+        )
+    </insert>
+
+    <select id="getDetail" resultType="com.edu.springboot.jdbc.BoardDTO">
+        SELECT 
+            b.IDX, b.TITLE, b.USER_ID, b.CONTENT, b.BOARD_TYPE, 
+            b.COUNT, b.LIKED, b.COMMENT_CNT, b.REVIEW_STAR AS review_star,
+            u.USER_NAME AS user_name, b.CREATED_AT AS createdat 
+        FROM BOARD b
+        LEFT JOIN USER_ACCOUNT u ON b.USER_ID = u.USER_ID  
+        WHERE b.IDX = #{idx}
+    </select>
+
+    <update id="update">
+        UPDATE BOARD 
+        SET TITLE = #{title, jdbcType=VARCHAR}, 
+            CONTENT = #{content, jdbcType=VARCHAR},
+            REVIEW_STAR = #{review_star}
+        WHERE IDX = #{idx}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM BOARD WHERE IDX = #{idx}
+    </delete>
+
+    <update id="updateCount">
+        UPDATE BOARD SET COUNT = COUNT + 1 WHERE IDX = #{idx}
+    </update>
+    
+    <select id="getTopReviews" resultType="com.edu.springboot.jdbc.BoardDTO">
+        SELECT *
+        FROM (
+            SELECT b.*, u.USER_NAME as user_name
+            FROM board b
+            LEFT JOIN USER_ACCOUNT u ON b.USER_ID = u.USER_ID
+            WHERE b.board_type = 'review'
+            ORDER BY b.idx DESC
+        )
+        WHERE ROWNUM &lt;= 5
+    </select>
+</mapper>

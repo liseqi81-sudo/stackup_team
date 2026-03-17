@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.mapper.PortfolioMapper">
+
+	<!-- ========================= Portfolio 기본 ========================= -->
+	<select id="selectPortfolioById" parameterType="long"
+		resultType="com.edu.springboot.jdbc.PortfolioNewDTO">
+		SELECT
+		portfolio_id AS portfolioId,
+		user_id AS userId,
+		title,
+		template_code AS templateCode,
+		slug,
+		status,
+		output_path AS outputPath,
+		thumbnail_path AS thumbnailPath,
+		portrait_path AS portraitPath,
+		created_at AS createdAt,
+		updated_at AS updatedAt
+		FROM portfolio_new
+		WHERE portfolio_id = #{portfolioId}
+	</select>
+
+	<!-- ========================= Skills ========================= -->
+	<select id="selectUserSkills" parameterType="string"
+		resultType="string">
+		SELECT s.skill_name
+		FROM user_skill us
+		JOIN skill s
+		ON
+		s.skill_id = us.skill_id
+		WHERE us.user_id = #{userId}
+		ORDER BY
+		s.skill_name ASC
+	</select>
+
+	<select id="selectContestNamesByIds" resultType="string">
+		SELECT cont_name
+		FROM contest
+		WHERE cont_id IN
+		<foreach collection="ids" item="id" open="(" separator=","
+			close=")">
+			#{id}
+		</foreach>
+		ORDER BY cont_name
+	</select>
+
+	<select id="selectUserSkillIds" parameterType="string"
+		resultType="int">
+		SELECT skill_id
+		FROM user_skill
+		WHERE user_id = #{userId}
+		ORDER BY skill_id
+	</select>
+
+	<!-- ========================= Portfolio 목록 / 생성 ========================= -->
+	<select id="selectPortfoliosByUserId" parameterType="string"
+		resultType="com.edu.springboot.jdbc.PortfolioNewDTO">
+		SELECT
+		portfolio_id AS portfolioId,
+		user_id AS userId,
+		title,
+		template_code AS templateCode,
+		slug,
+		status,
+		output_path AS outputPath,
+		thumbnail_path AS thumbnailPath,
+		portrait_path AS portraitPath,
+		created_at AS createdAt,
+		updated_at AS updatedAt
+		FROM portfolio_new
+		WHERE user_id = #{userId}
+		ORDER BY updated_at DESC
+	</select>
+
+	<select id="selectResumePortfolioByUserId"
+		resultType="com.edu.springboot.jdbc.PortfolioNewDTO">
+		SELECT
+		portfolio_id AS portfolioId,
+		user_id AS userId,
+		title,
+		template_code AS templateCode,
+		slug,
+		status,
+		output_path AS outputPath,
+		thumbnail_path AS thumbnailPath,
+		portrait_path AS portraitPath,
+		created_at AS createdAt,
+		updated_at AS updatedAt
+		FROM portfolio_new
+		WHERE user_id = #{userId}
+		AND template_code = #{templateCode}
+		ORDER BY
+		updated_at DESC
+		FETCH FIRST 1 ROWS ONLY
+	</select>
+
+	<select id="selectPortfolioIdByUserAndTemplate"
+		resultType="long">
+		SELECT portfolio_id
+		FROM portfolio_new
+		WHERE user_id =
+		#{userId}
+		AND template_code = #{templateCode}
+		ORDER BY updated_at DESC
+		FETCH FIRST 1 ROWS ONLY
+	</select>
+
+	<insert id="insertPortfolioNew">
+		INSERT INTO portfolio_new
+		(
+		portfolio_id,
+		user_id,
+		title,
+		template_code,
+		slug,
+		status,
+		created_at,
+		updated_at
+		)
+		VALUES
+		(
+		seq_portfolio_new.NEXTVAL,
+		#{userId},
+		#{title},
+		#{templateCode},
+		#{slug},
+		#{status},
+		SYSDATE,
+		SYSDATE
+		)
+	</insert>
+
+	<update id="updatePortfolioOutput">
+		UPDATE portfolio_new
+		SET
+		output_path = #{outputPath},
+		thumbnail_path = #{thumbnailPath},
+		updated_at = SYSDATE
+		WHERE
+		portfolio_id = #{portfolioId}
+	</update>
+
+	<!-- ========================= Snapshot ========================= -->
+	<insert id="insertSnapshot">
+		INSERT INTO portfolio_snapshot
+		(
+		snapshot_id,
+		portfolio_id,
+		snapshot_json,
+		created_at
+		)
+		VALUES
+		(
+		seq_portfolio_snapshot.NEXTVAL,
+		#{portfolioId},
+		#{snapshotJson,
+		jdbcType=CLOB},
+		SYSDATE
+		)
+	</insert>
+
+	<insert id="insertPortfolioSnapshot">
+		INSERT INTO portfolio_snapshot
+		(
+		snapshot_id,
+		portfolio_id,
+		snapshot_json,
+		created_at
+		)
+		VALUES
+		(
+		seq_portfolio_snapshot.NEXTVAL,
+		#{portfolioId},
+		#{snapshotJson,
+		jdbcType=CLOB},
+		SYSDATE
+		)
+	</insert>
+
+	<select id="selectLatestSnapshot" parameterType="long"
+		resultType="com.edu.springboot.jdbc.PortfolioSnapshotDTO">
+		SELECT
+		snapshot_id AS snapshotId,
+		portfolio_id AS
+		portfolioId,
+		snapshot_json AS snapshotJson,
+		created_at AS createdAt
+		FROM
+		portfolio_snapshot
+		WHERE portfolio_id = #{portfolioId}
+		ORDER BY
+		created_at DESC
+		FETCH FIRST 1 ROWS ONLY
+	</select>
+
+	<select id="selectLatestSnapshotByUserId" parameterType="string"
+		resultType="com.edu.springboot.jdbc.PortfolioSnapshotDTO">
+		SELECT
+		ps.snapshot_id AS snapshotId,
+		ps.portfolio_id AS
+		portfolioId,
+		ps.snapshot_json AS snapshotJson,
+		ps.created_at AS
+		createdAt
+		FROM portfolio_snapshot ps
+		JOIN portfolio_new pn
+		ON
+		ps.portfolio_id = pn.portfolio_id
+		WHERE pn.user_id = #{userId}
+		ORDER BY
+		ps.created_at DESC
+		FETCH FIRST 1 ROWS ONLY
+	</select>
+
+	<select id="selectSnapshotsByPortfolioId" parameterType="long"
+		resultType="com.edu.springboot.jdbc.PortfolioSnapshotDTO">
+		SELECT
+		snapshot_id AS snapshotId,
+		portfolio_id AS
+		portfolioId,
+		snapshot_json AS snapshotJson,
+		created_at AS createdAt
+		FROM
+		portfolio_snapshot
+		WHERE portfolio_id = #{portfolioId}
+		ORDER BY
+		created_at DESC
+	</select>
+
+	<select id="countSnapshotsByPortfolioId" parameterType="long"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM portfolio_snapshot
+		WHERE portfolio_id =
+		#{portfolioId}
+	</select>
+	<select id="selectUserSkillItems" parameterType="string"
+		resultType="com.edu.springboot.jdbc.ResumeSkillDTO">
+		SELECT
+		s.skill_name AS skillName,
+		us.user_level AS userLevel
+		FROM user_skill us
+		JOIN skill s
+		ON s.skill_id = us.skill_id
+		WHERE
+		us.user_id = #{userId}
+		ORDER BY us.user_level DESC, s.skill_name ASC
+	</select>
+
+	<update id="updateLatestSnapshotJson">
+		UPDATE portfolio_snapshot
+		SET snapshot_json = #{snapshotJson},
+		created_at = SYSTIMESTAMP
+		WHERE snapshot_id = (
+		SELECT snapshot_id
+		FROM (
+		SELECT ps.snapshot_id
+		FROM portfolio_snapshot ps
+		JOIN portfolio_new pn
+		ON pn.portfolio_id = ps.portfolio_id
+		WHERE ps.portfolio_id = #{portfolioId}
+		AND pn.user_id = #{userId}
+		ORDER BY ps.created_at DESC
+		)
+		WHERE ROWNUM = 1
+		)
+	</update>
+</mapper>

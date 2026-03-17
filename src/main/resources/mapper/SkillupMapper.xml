@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.ISkillupService"> 
+
+    <select id="selectUserSkillList" resultType="com.edu.springboot.jdbc.UserSkillDTO">
+        SELECT 
+            A.US_ID AS usId,        A.USER_ID AS userId, 
+            A.SKILL_ID AS skillId, 
+            B.SKILL_NAME AS skillName, A.USER_LEVEL AS userLevel
+        FROM USER_SKILL A
+        INNER JOIN SKILL B ON A.SKILL_ID = B.SKILL_ID
+        WHERE A.USER_ID = #{userId}
+    </select>
+
+    <delete id="deleteUserSkills">
+        DELETE FROM USER_SKILL WHERE USER_ID = #{userId}
+    </delete>
+
+    <insert id="insertUserSkill">
+        INSERT INTO USER_SKILL (US_ID, USER_ID, SKILL_ID, USER_LEVEL)
+        VALUES (
+            (
+                SELECT TO_CHAR(NVL(MAX(TO_NUMBER(US_ID)), 0) + 1) 
+                FROM USER_SKILL 
+                WHERE REGEXP_LIKE(US_ID, '^[0-9]+$')
+            ), 
+            #{userId}, 
+            #{skillId}, 
+            #{userLevel}
+        )
+    </insert>
+
+    <select id="selectUserIngList" resultType="com.edu.springboot.jdbc.UserIngDTO">
+        SELECT
+            ui.ING_ID AS ingId,
+            ui.USER_ID AS userId,
+            ui.TARGET_TYPE AS targetType,
+            ui.TARGET_ID AS targetId,
+            ui.STATUS AS status,
+            ui.LAST_AUTH_DATE AS lastAuthDate,
+            CASE
+                WHEN ui.TARGET_TYPE = 'CERTI' THEN c.CERTI_NAME
+                WHEN ui.TARGET_TYPE = 'CONTEST' THEN ct.CONT_NAME
+            END AS targetName,
+            CASE
+                WHEN ui.TARGET_TYPE = 'CERTI' THEN TO_CHAR(es.EXAM_DATE, 'YYYY-MM-DD')
+                WHEN ui.TARGET_TYPE = 'CONTEST' THEN TO_CHAR(ct.DEADLINE, 'YYYY-MM-DD')
+            END AS examDate
+        FROM USER_ING ui
+        LEFT JOIN CERTIFICATION c
+          ON ui.TARGET_TYPE = 'CERTI' AND ui.TARGET_ID = c.CERTI_ID
+        LEFT JOIN (
+            SELECT CERT_ID, MIN(EXAM_DATE) as EXAM_DATE
+            FROM EXAM_SCHEDULE
+            WHERE EXAM_DATE >= TRUNC(SYSDATE)
+            GROUP BY CERT_ID
+        ) es
+          ON ui.TARGET_TYPE = 'CERTI'
+         AND TRIM(REPLACE(c.CERTI_NAME, ' ', '')) = TRIM(REPLACE(es.CERT_ID, ' ', ''))
+        LEFT JOIN CONTEST ct
+          ON ui.TARGET_TYPE = 'CONTEST' AND ui.TARGET_ID = TO_CHAR(ct.CONT_ID)
+        WHERE ui.USER_ID = #{userId}
+        ORDER BY ui.ING_ID DESC
+    </select>
+
+    <select id="selectSavedItemList" resultType="com.edu.springboot.jdbc.SavedItemDTO">
+        SELECT S.SAVED_ID as savedId, S.USER_ID as userId, S.TARGET_TYPE as targetType,
+               S.TARGET_ID as targetId, NVL(C.CERTI_NAME, T.CONT_NAME) as targetName
+        FROM SAVED_ITEM S
+        LEFT OUTER JOIN CERTIFICATION C ON S.TARGET_ID = C.CERTI_ID AND S.TARGET_TYPE = 'CERTI'
+        LEFT OUTER JOIN CONTEST T ON S.TARGET_ID = T.CONT_ID AND S.TARGET_TYPE = 'CONTEST'
+        WHERE S.USER_ID = #{userId}
+    </select>
+    
+    <select id="selectAllSkills" resultType="map">
+        SELECT SKILL_ID as SKILL_ID, SKILL_NAME as SKILL_NAME 
+        FROM SKILL ORDER BY SKILL_NAME ASC
+    </select>
+    
+    <delete id="deleteUserIngByUser" parameterType="map">
+        DELETE FROM USER_ING
+        WHERE ING_ID = #{ingId} AND USER_ID = #{userId}
+    </delete>
+    
+    <select id="selectMainExam" parameterType="string" resultType="com.edu.springboot.jdbc.MainExamDTO">
+        SELECT examName, dayLeft, examDate, targetType, targetId
+        FROM (
+            SELECT examName, dayLeft, examDate, targetType, targetId, sortDate
+            FROM (
+                SELECT c.CERTI_NAME AS examName, TRUNC(es.EXAM_DATE) - TRUNC(SYSDATE) AS dayLeft, es.EXAM_DATE AS examDate, ui.TARGET_TYPE AS targetType, ui.TARGET_ID AS targetId, es.EXAM_DATE AS sortDate
+                FROM USER_ING ui
+                JOIN CERTIFICATION c ON ui.TARGET_TYPE = 'CERTI' AND ui.TARGET_ID = c.CERTI_ID
+                JOIN EXAM_SCHEDULE es ON TRIM(REPLACE(c.CERTI_NAME, ' ', '')) = TRIM(REPLACE(es.CERT_ID, ' ', ''))
+                WHERE ui.USER_ID = #{userId} AND es.EXAM_DATE >= TRUNC(SYSDATE)
+                UNION ALL
+                SELECT ct.CONT_NAME AS examName, TRUNC(ct.DEADLINE) - TRUNC(SYSDATE) AS dayLeft, ct.DEADLINE AS examDate, ui.TARGET_TYPE AS targetType, ui.TARGET_ID AS targetId, ct.DEADLINE AS sortDate
+                FROM USER_ING ui
+                JOIN CONTEST ct ON ui.TARGET_TYPE = 'CONTEST' AND ui.TARGET_ID = TO_CHAR(ct.CONT_ID)
+                WHERE ui.USER_ID = #{userId} AND ct.DEADLINE >= TRUNC(SYSDATE)
+            ) ORDER BY sortDate ASC
+        ) WHERE ROWNUM = 1
+    </select>
+    
+    <delete id="removeFavorite">
+        DELETE FROM SAVED_ITEM 
+        WHERE USER_ID = #{param1} AND TARGET_ID = #{param2} AND TARGET_TYPE = #{param3}
+    </delete>
+    
+    <select id="selectUserJob" resultType="com.edu.springboot.skillup.UserJobDTO">
+        SELECT uj.JOB_ID AS jobId, jr.JOB_NAME AS jobName
+        FROM USER_JOB uj
+        JOIN JOB_ROLE jr ON uj.JOB_ID = jr.JOB_ID
+        WHERE uj.USER_ID = #{userId}
+    </select>
+    
+    <select id="selectJobSkills" resultType="com.edu.springboot.skillup.SkillDTO">
+        SELECT * FROM (
+            SELECT s.SKILL_ID AS skillId, s.SKILL_NAME AS skillName, jcsw.WEIGHT AS weight
+            FROM JOB_CATEGORY_SKILL_WEIGHT jcsw
+            JOIN SKILL s ON jcsw.SKILL_ID = s.SKILL_ID
+            WHERE jcsw.JOB_CATEGORY = #{jobCategory}
+            ORDER BY jcsw.WEIGHT DESC
+        ) WHERE ROWNUM &lt;= 5
+    </select>
+
+    <select id="getIngInfo" resultType="com.edu.springboot.jdbc.UserIngDTO">
+        SELECT
+            ui.ING_ID AS ingId,
+            ui.STATUS AS status,
+            CASE
+                WHEN ui.TARGET_TYPE = 'CERTI' THEN TO_CHAR(es.EXAM_DATE, 'YYYY-MM-DD')
+                WHEN ui.TARGET_TYPE = 'CONTEST' THEN TO_CHAR(ct.DEADLINE, 'YYYY-MM-DD')
+            END AS examDate
+        FROM USER_ING ui
+        LEFT JOIN CERTIFICATION c ON ui.TARGET_TYPE = 'CERTI' AND ui.TARGET_ID = c.CERTI_ID
+        LEFT JOIN (
+            SELECT CERT_ID, MIN(EXAM_DATE) as EXAM_DATE
+            FROM EXAM_SCHEDULE
+            WHERE EXAM_DATE >= TRUNC(SYSDATE)
+            GROUP BY CERT_ID
+        ) es ON TRIM(REPLACE(c.CERTI_NAME, ' ', '')) = TRIM(REPLACE(es.CERT_ID, ' ', ''))
+        LEFT JOIN CONTEST ct ON ui.TARGET_TYPE = 'CONTEST' AND ui.TARGET_ID = TO_CHAR(ct.CONT_ID)
+        WHERE ui.ING_ID = #{ingId}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE USER_ING
+        SET STATUS = #{status},
+            LAST_AUTH_DATE = SYSDATE
+        WHERE ING_ID = #{ingId}
+    </update>
+    
+</mapper>

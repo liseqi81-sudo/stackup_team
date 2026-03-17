@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.mapper.AIrecomedMapper">
+
+    <select id="getUserSkills" resultType="java.util.Map">
+        SELECT 
+            s.SKILL_NAME AS skillName,
+            us.USER_LEVEL AS skillLevel
+        FROM USER_SKILL us
+        INNER JOIN SKILL s 
+            ON us.SKILL_ID = s.SKILL_ID
+        WHERE us.USER_ID = #{userId}
+    </select>
+
+    <delete id="deleteUserSkills">
+        DELETE FROM USER_SKILL
+        WHERE USER_ID = #{userId}
+    </delete>
+
+    <select id="findSkillIdByName" resultType="string">
+        SELECT SKILL_ID
+        FROM SKILL
+        WHERE SKILL_NAME = #{skillName}
+    </select>
+
+    <insert id="insertUserSkill">
+	    INSERT INTO USER_SKILL (US_ID, USER_ID, SKILL_ID, USER_LEVEL)
+	    VALUES (USER_SKILL_SEQ.NEXTVAL, #{userId}, #{skillId}, #{skillLevel})
+	</insert>
+    
+    <select id="getAllSkills" resultType="java.util.Map">
+	    SELECT
+	        SKILL_ID,
+	        SKILL_NAME
+	    FROM SKILL
+	    ORDER BY SKILL_NAME
+	</select>
+	
+	<select id="checkUserJob" resultType="int">
+	  SELECT COUNT(*)
+	  FROM USER_JOB
+	  WHERE USER_ID = #{userId}
+	    AND JOB_ID = #{jobId}
+	</select>
+	
+	<select id="existsUserJob" resultType="int">
+	  SELECT COUNT(*)
+	  FROM USER_JOB
+	  WHERE USER_ID = #{userId}
+	</select>
+	
+	<insert id="insertUserJob">
+	  INSERT INTO USER_JOB (
+	    USERJOB_ID,
+	    USER_ID,
+	    JOB_ID
+	  ) VALUES (
+	    'UJ' || LPAD(USER_JOB_SEQ.NEXTVAL, 6, '0'),
+	    #{userId},
+	    #{jobId}
+	  )
+	</insert>
+	
+	<update id="updateUserJob">
+	  UPDATE USER_JOB
+	  SET JOB_ID = #{jobId}
+	  WHERE USER_ID = #{userId}
+	</update>
+	
+	<select id="checkUserSkill" resultType="int">
+	  SELECT COUNT(*)
+	  FROM USER_SKILL
+	  WHERE USER_ID = #{userId}
+	    AND SKILL_ID = #{skillId}
+	</select>
+
+</mapper>

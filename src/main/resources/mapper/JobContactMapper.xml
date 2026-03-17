@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.IJobContactService">
+
+    <insert id="insertContact" parameterType="com.edu.springboot.jdbc.JobContactDTO">
+        INSERT INTO JOB_CONTACT (
+            CONTACT_ID,
+            RECEIVER_ID,
+            SEEK_ID,
+            CONTACT_TITLE,
+            COMPANY_INFO,
+            JOB_INFO,
+            CONTACT_CONTENT,
+            FILE_ORG_NAME,
+            FILE_SAVED_NAME,
+            FILE_PATH,
+            READ_YN,
+            SENDER_ID,
+            CREATED_AT
+        ) VALUES (
+            SEQ_JOB_CONTACT.NEXTVAL,
+            #{receiverId},
+            #{seekId},
+            #{contactTitle},
+            #{companyInfo},
+            #{jobInfo},
+            #{contactContent},
+            #{fileOrgName},
+            #{fileSavedName},
+            #{filePath},
+            'N',
+            #{senderId},
+            SYSDATE
+        )
+    </insert>
+
+    <select id="getReceivedContacts" resultType="com.edu.springboot.jdbc.JobContactDTO">
+        SELECT
+            CONTACT_ID    AS contactId,
+            RECEIVER_ID   AS receiverId,
+            SEEK_ID       AS seekId,
+            CONTACT_TITLE AS contactTitle,
+            COMPANY_INFO  AS companyInfo,
+            JOB_INFO      AS jobInfo,
+            CONTACT_CONTENT AS contactContent,
+            FILE_ORG_NAME AS fileOrgName,
+            FILE_SAVED_NAME AS fileSavedName,
+            FILE_PATH     AS filePath,
+            READ_YN       AS readYn,
+            SENDER_ID     AS senderId,
+            CREATED_AT    AS createdAt,
+            READ_AT       AS readAt
+        FROM JOB_CONTACT
+        WHERE RECEIVER_ID = #{receiverId}
+        ORDER BY CREATED_AT DESC
+    </select>
+
+    <select id="getContactDetail" resultType="com.edu.springboot.jdbc.JobContactDTO">
+        SELECT
+            CONTACT_ID    AS contactId,
+            RECEIVER_ID   AS receiverId,
+            SEEK_ID       AS seekId,
+            CONTACT_TITLE AS contactTitle,
+            COMPANY_INFO  AS companyInfo,
+            JOB_INFO      AS jobInfo,
+            CONTACT_CONTENT AS contactContent,
+            FILE_ORG_NAME AS fileOrgName,
+            FILE_SAVED_NAME AS fileSavedName,
+            FILE_PATH     AS filePath,
+            READ_YN       AS readYn,
+            SENDER_ID     AS senderId,
+            CREATED_AT    AS createdAt,
+            READ_AT       AS readAt
+        FROM JOB_CONTACT
+        WHERE CONTACT_ID = #{contactId}
+    </select>
+
+    <update id="updateReadStatus">
+        UPDATE JOB_CONTACT
+        SET READ_YN = 'Y',
+            READ_AT = SYSDATE
+        WHERE CONTACT_ID = #{contactId}
+          AND READ_YN = 'N'
+    </update>
+
+    <select id="getUnreadContactCount" resultType="int">
+        SELECT COUNT(*)
+        FROM JOB_CONTACT
+        WHERE RECEIVER_ID = #{receiverId}
+          AND READ_YN = 'N'
+    </select>
+
+</mapper>

@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.mapper.JobPostingMapper">
+
+	<select id="selectList"
+		resultType="com.edu.springboot.jdbc.JobPostingDTO">
+		SELECT *
+		FROM (
+		SELECT A.*, ROWNUM rnum
+		FROM (
+		SELECT
+		posting_id AS
+		postingId,
+		job_category AS jobCategory,
+		company_name AS companyName,
+		title,
+		deadline,
+		skills,
+		post_type AS postType,
+		posting_url AS postingUrl,
+		createdate,
+		contents
+		FROM job_posting
+		<where>
+			<if test="keyword != null and keyword != ''">
+				(title LIKE '%' || #{keyword} || '%'
+				OR company_name LIKE
+				'%' || #{keyword} || '%'
+				OR skills LIKE '%' || #{keyword} || '%')
+			</if>
+
+			<if
+				test="category != null and category != '' and category != 'ALL'">
+				AND job_category = #{category}
+			</if>
+		</where>
+		ORDER BY createdate DESC
+		) A
+		WHERE ROWNUM &lt;= #{offset} + #{pageSize}
+		)
+		WHERE rnum &gt; #{offset}
+	</select>
+
+	<select id="countList" resultType="int">
+		SELECT COUNT(*)
+		FROM job_posting
+		<where>
+			<if test="keyword != null and keyword != ''">
+				(title LIKE '%' || #{keyword} || '%'
+				OR company_name LIKE
+				'%' || #{keyword} || '%'
+				OR skills LIKE '%' || #{keyword} || '%')
+			</if>
+
+			<if
+				test="category != null and category != '' and category != 'ALL'">
+				AND job_category = #{category}
+			</if>
+		</where>
+	</select>
+
+	<select id="selectAll"
+		resultType="com.edu.springboot.jdbc.JobPostingDTO">
+		SELECT
+		jp.posting_id AS postingId,
+		jp.job_category AS jobCategory,
+		jp.company_name AS companyName,
+		jp.title,
+		jp.deadline,
+		jp.skills,
+		jp.post_type AS postType,
+		jp.posting_url AS postingUrl,
+		jp.createdate,
+		CASE WHEN si.target_id IS NOT NULL THEN 'Y' ELSE 'N' END AS is_fav
+		FROM job_posting jp
+		LEFT OUTER JOIN saved_item si
+		ON si.target_type = 'JOB'
+		AND si.target_id = TO_CHAR(jp.posting_id)
+		AND si.user_id = #{userId}
+		<where>
+			<if test="keyword != null and keyword != ''">
+				(jp.title LIKE '%' || #{keyword} || '%'
+				OR jp.company_name LIKE '%' || #{keyword} || '%'
+				OR jp.skills LIKE '%' || #{keyword} || '%')
+			</if>
+
+			<if
+				test="category != null and category != '' and category != 'ALL'">
+				AND jp.job_category = #{category}
+			</if>
+		</where>
+		ORDER BY jp.createdate DESC
+	</select>
+	<!-- <select id="selectAll" resultType="com.edu.springboot.jdbc.JobPostingDTO"> 
+		SELECT jp.posting_id AS postingId, jp.job_category AS jobCategory, jp.company_name 
+		AS companyName, jp.title, jp.deadline, jp.skills, jp.post_type AS postType, 
+		jp.posting_url AS postingUrl, jp.createdate, CASE WHEN si.target_id IS NULL 
+		THEN 'N' ELSE 'Y' END AS is_fav FROM job_posting jp LEFT JOIN saved_item 
+		si ON si.target_type = 'JOB' AND si.target_id = TO_CHAR(jp.posting_id) AND 
+		si.user_id = #{userId} <where> <if test="keyword != null and keyword != ''"> 
+		(jp.title LIKE '%' || #{keyword} || '%' OR jp.company_name LIKE '%' || #{keyword} 
+		|| '%' OR jp.skills LIKE '%' || #{keyword} || '%') </if> <if test="category 
+		!= null and category != '' and category != 'ALL'"> AND jp.job_category = 
+		#{category} </if> </where> ORDER BY jp.createdate DESC </select> -->
+
+	<select id="selectOne" parameterType="string"
+		resultType="com.edu.springboot.jdbc.JobPostingDTO">
+		SELECT posting_id AS postingId,
+		job_category AS jobCategory,
+		company_name AS companyName,
+		title,
+		CAST(deadline AS DATE) AS deadline,
+		skills,
+		post_type AS postType,
+		posting_url AS postingUrl,
+		CAST(createdate AS DATE) AS createdate,
+		contents,
+		writer_id AS writerId
+		FROM job_posting
+		WHERE posting_id = #{postingId}
+	</select>
+
+	<insert id="insert"
+		parameterType="com.edu.springboot.jdbc.JobPostingDTO">
+		INSERT INTO job_posting (
+		posting_id,
+		job_category,
+		company_name,
+		title,
+		deadline,
+		skills,
+		post_type,
+		posting_url,
+		contents,
+		writer_id,
+		createdate
+		) VALUES (
+		seq_job_posting_id.NEXTVAL,
+		#{jobCategory},
+		#{companyName},
+		#{title},
+		#{deadline, jdbcType=DATE},
+		#{skills},
+		#{postType},
+		#{postingUrl},
+		#{contents},
+		#{writerId},
+		SYSDATE
+		)
+	</insert>
+
+	<update id="update"
+		parameterType="com.edu.springboot.jdbc.JobPostingDTO">
+		UPDATE job_posting
+		SET
+		job_category = #{jobCategory},
+		company_name = #{companyName},
+		title = #{title},
+		deadline = #{deadline,
+		jdbcType=DATE},
+		skills = #{skills},
+		post_type = #{postType},
+		posting_url
+		= #{postingUrl},
+		contents = #{contents},
+		createdate = SYSDATE
+		WHERE
+		posting_id = #{postingId}
+		AND writer_id = #{writerId}
+	</update>
+
+	<delete id="delete" parameterType="string">
+		DELETE FROM job_posting
+		WHERE
+		posting_id = #{postingId}
+	</delete>
+	
+	<select id="selectTop5" resultType="com.edu.springboot.jdbc.JobPostingDTO">
+	  SELECT
+		posting_id AS
+		postingId,
+		job_category AS jobCategory,
+		company_name AS companyName,
+		title,
+		deadline,
+		skills,
+		post_type AS postType,
+		posting_url AS postingUrl,
+		createdate,
+		contents
+	  FROM job_posting
+	  FETCH FIRST 5 ROWS ONLY
+	</select>
+
+</mapper>

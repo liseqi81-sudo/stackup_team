@@ -1,0 +1,5 @@
+eclipse.preferences.version=1
+encoding//src/main/resources/application.properties=UTF-8
+encoding//src/main/webapp/WEB-INF/views/certifi/clist.jsp=UTF-8
+encoding//src/main/webapp/WEB-INF/views/jobseeker/seekerlist.jsp=UTF-8
+encoding//src/main/webapp/WEB-INF/views/review/reviewList.jsp=UTF-8

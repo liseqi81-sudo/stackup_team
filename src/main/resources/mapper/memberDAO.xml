@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.IMemberService">
+
+    <select id="loginCheck" parameterType="com.edu.springboot.jdbc.UserDTO" 
+            resultType="com.edu.springboot.jdbc.UserDTO">
+        SELECT * FROM user_account 
+        WHERE user_id = #{user_id} AND user_pw = #{user_pw}
+    </select>
+
+    <select id="checkId" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM user_account WHERE user_id = #{user_id}
+    </select>
+
+    <insert id="insertUser" parameterType="com.edu.springboot.jdbc.UserDTO">
+    	INSERT INTO user_account (
+        	user_id, user_pw, user_name, user_email, 
+        	user_phone, user_type, company_name, company_email, manager_name, created_at
+    	) VALUES (
+        	#{user_id}, 
+        	#{user_pw}, 
+        	#{user_name, jdbcType=VARCHAR},   #{user_email, jdbcType=VARCHAR},  #{user_phone, jdbcType=VARCHAR},  #{user_type}, 
+        	#{company_name, jdbcType=VARCHAR}, 
+        	#{company_email, jdbcType=VARCHAR}, 
+        	#{manager_name, jdbcType=VARCHAR}, 
+        	SYSDATE
+    	)
+	</insert>
+
+    <select id="findId" resultType="string">
+        SELECT user_id FROM user_account 
+        WHERE user_name = #{user_name} AND user_email = #{user_email}
+    </select>
+	
+    <select id="checkUserForPw" resultType="int">
+        SELECT COUNT(*) FROM user_account 
+        WHERE user_name = #{user_name} 
+          AND user_id = #{user_id} 
+          AND user_email = #{user_email}
+    </select>
+
+    <update id="updatePw">
+        UPDATE user_account 
+        SET user_pw = #{user_pw} 
+        WHERE user_id = #{user_id}
+    </update>
+
+    <update id="updateCompanyInfo" parameterType="com.edu.springboot.jdbc.UserDTO">
+        UPDATE user_account 
+        SET company_name = #{company_name},
+            company_email = #{company_email},
+            manager_name = #{manager_name}
+        WHERE user_id = #{user_id}
+    </update>
+
+    <select id="selectMyPage" parameterType="string" resultType="com.edu.springboot.jdbc.UserDTO">
+        SELECT user_id, user_name, user_email, user_phone, user_type, created_at, 
+               company_name, company_email, manager_name
+        FROM user_account
+        WHERE user_id = #{user_id}
+    </select>
+	
+    <update id="updateMyPage" parameterType="com.edu.springboot.jdbc.UserDTO">
+        UPDATE user_account
+        SET user_name = #{user_name},
+            user_email = #{user_email},
+            user_phone = #{user_phone},
+            company_name = #{company_name, jdbcType=VARCHAR},
+            company_email = #{company_email, jdbcType=VARCHAR},
+            manager_name = #{manager_name, jdbcType=VARCHAR}
+        WHERE user_id = #{user_id}
+    </update>
+
+    <select id="selectOne" parameterType="com.edu.springboot.jdbc.UserDTO" resultType="com.edu.springboot.jdbc.UserDTO">
+        SELECT * FROM user_account WHERE user_id = #{user_id}
+    </select>
+
+</mapper>

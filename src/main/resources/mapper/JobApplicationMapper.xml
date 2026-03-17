@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.jdbc.IJobApplicationService">
+
+    <select id="checkDuplicateApplication" resultType="int">
+	    SELECT COUNT(*)
+	    FROM JOB_APPLICATION
+	    WHERE USER_ID = #{user_id}
+	      AND POSTING_ID = #{posting_id}
+	</select>
+	
+	<insert id="insertApplication">
+	    INSERT INTO JOB_APPLICATION (
+	        APPLY_ID,
+	        USER_ID,
+	        POSTING_ID,
+	        APPLY_TITLE,
+	        APPLY_CONTENT,
+	        RESUME_FILE,
+	        APPLY_STATUS,
+	        CREATED_AT,
+	        UPDATED_AT
+	    ) VALUES (
+	        SEQ_JOB_APPLICATION.NEXTVAL,
+	        #{user_id},
+	        #{posting_id},
+	        #{apply_title},
+	        #{apply_content},
+	        #{resume_file},
+	        'SUBMITTED',
+	        SYSDATE,
+	        SYSDATE
+	    )
+    </insert>
+
+    <select id="getApplicationsByUser" resultType="com.edu.springboot.jdbc.JobApplicationDTO">
+        SELECT *
+        FROM JOB_APPLICATION
+        WHERE USER_ID = #{user_id}
+        ORDER BY CREATED_AT DESC
+    </select>
+
+    <select id="getApplicationsByPosting" resultType="com.edu.springboot.jdbc.JobApplicationDTO">
+	        SELECT *
+	        FROM JOB_APPLICATION
+	        WHERE POSTING_ID = #{posting_id}
+	        ORDER BY CREATED_AT DESC
+	    </select>
+	    
+	   <select id="selectApplicationsByCompany"
+	        parameterType="string"
+	        resultType="com.edu.springboot.jdbc.JobApplicationDTO">
+	
+	    SELECT
+	        ja.APPLY_ID,
+	        ja.USER_ID,
+	        ja.POSTING_ID,
+	        ja.APPLY_TITLE,
+	        ja.APPLY_CONTENT,
+	        ja.RESUME_FILE,
+	        ja.APPLY_STATUS,
+	        ja.CREATED_AT,
+	        ja.UPDATED_AT,
+	        jp.TITLE AS postingTitle,
+	        u.USER_NAME AS applicantName
+	    FROM JOB_APPLICATION ja
+	    JOIN JOB_POSTING jp
+	      ON ja.POSTING_ID = jp.POSTING_ID
+	    JOIN USER_ACCOUNT u
+    	  ON ja.USER_ID = u.USER_ID
+	    WHERE jp.WRITER_ID = #{companyId}
+	    ORDER BY ja.CREATED_AT DESC
+	
+	</select>
+
+
+</mapper>

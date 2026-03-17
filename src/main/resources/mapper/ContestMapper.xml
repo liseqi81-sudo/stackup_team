@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.edu.springboot.mapper.ContestMapper">
+
+	<sql id="baseColumns">
+		cont_id AS contId,
+		cont_name AS contName,
+		organizer AS
+		organizer,
+		deadline AS deadline,
+		logo_img AS logoImg,
+		site_url AS
+		siteUrl,
+		category AS category,
+		createdate AS createdate
+	</sql>
+	<select id="selectAll"
+		resultType="com.edu.springboot.jdbc.ContestDTO">
+		SELECT
+		cont_id AS contId,
+		cont_name AS contName,
+		organizer AS
+		organizer,
+		deadline AS deadline,
+		logo_img AS logoImg,
+		site_url AS
+		siteUrl,
+		category AS category,
+		createdate AS createdate
+		FROM contest
+		ORDER BY deadline ASC
+	</select>
+
+	<select id="selectTop6"
+		resultType="com.edu.springboot.jdbc.ContestDTO">
+		SELECT
+		cont_id AS contId,
+		cont_name AS contName,
+		organizer,
+		deadline,
+		logo_img AS logoImg,
+		site_url AS siteUrl,
+		category,
+		createdate
+		FROM contest
+		ORDER BY deadline ASC NULLS LAST
+		FETCH FIRST 6 ROWS ONLY
+	</select>
+
+	<select id="selectCategoryList" resultType="string">
+		SELECT DISTINCT
+		category
+		FROM contest
+		WHERE category IS NOT NULL
+		ORDER BY category
+	</select>
+
+	<select id="selectList"
+	  resultType="com.edu.springboot.jdbc.ContestDTO">
+	  SELECT
+	    c.cont_id AS contId,
+	    c.cont_name AS contName,
+	    c.organizer AS organizer,
+	    c.deadline AS deadline,
+	    c.logo_img AS logoImg,
+	    c.site_url AS siteUrl,
+	    c.category AS category,
+	    c.createdate AS createdate,
+	    CASE WHEN si.target_id IS NOT NULL THEN 'Y' ELSE 'N' END AS is_fav,
+	    CASE WHEN ui.target_id IS NOT NULL THEN 'Y' ELSE 'N' END AS is_skillup
+	  FROM contest c
+	  LEFT OUTER JOIN saved_item si
+	    ON si.target_type = 'CONTEST'
+	    AND si.target_id = TO_CHAR(c.cont_id)
+	    AND si.user_id = #{userId}
+	  LEFT OUTER JOIN user_ing ui
+	    ON ui.target_type = 'CONTEST'
+	    AND ui.target_id = TO_CHAR(c.cont_id)
+	    AND ui.user_id = #{userId}
+	  <where>
+	    <if test="keyword != null and keyword != ''">
+	      (c.cont_name LIKE '%' || #{keyword} || '%'
+	      OR c.organizer LIKE '%' || #{keyword} || '%')
+	    </if>
+	
+	    <if test="category != null and category != '' and category != 'ALL'">
+	      AND c.category = #{category}
+	    </if>
+	
+	    <if test="sort == 'deadline'">
+	      AND c.deadline &gt;= TRUNC(SYSDATE)
+	    </if>
+	  </where>
+	
+	  <choose>
+	    <when test="sort == 'deadline'">
+	      ORDER BY c.deadline ASC NULLS LAST
+	    </when>
+	    <otherwise>
+	      ORDER BY c.createdate DESC
+	    </otherwise>
+	  </choose>
+	</select>
+
+	<select id="countList" resultType="int">
+		SELECT COUNT(*)
+		FROM contest
+		<where>
+			<if test="keyword != null and keyword != ''">
+				(cont_name LIKE '%' || #{keyword} || '%'
+				OR organizer LIKE
+				'%' || #{keyword} || '%')
+			</if>
+
+			<if
+				test="category != null and category != '' and category != 'ALL'">
+				AND category = #{category}
+			</if>
+
+			<!-- ✅ selectList와 동일하게 -->
+			<if test="sort == 'deadline'">
+				AND deadline &gt;= TRUNC(SYSDATE)
+			</if>
+		</where>
+	</select>
+	
+	<select id="checkUserIng" resultType="int">
+	  SELECT COUNT(*)
+	  FROM USER_ING
+	  WHERE USER_ID = #{param1}
+	    AND TARGET_ID = #{param2}
+	    AND TARGET_TYPE = #{param3}
+	</select>
+	<insert id="addUserIng">
+	  INSERT INTO USER_ING (ING_ID, USER_ID, TARGET_ID, TARGET_TYPE, STATUS)
+	  VALUES (USER_ING_SEQ.NEXTVAL, #{param1}, #{param2}, #{param3}, 0)
+	</insert>
+	<delete id="removeUserIng">
+	  DELETE FROM USER_ING
+	  WHERE USER_ID = #{param1}
+	    AND TARGET_ID = #{param2}
+	    AND TARGET_TYPE = #{param3}
+	</delete>
+	
+
+</mapper>
